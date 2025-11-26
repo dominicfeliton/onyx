@@ -8,8 +8,6 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 from onyx.chat.turn.fast_chat_turn import _run_non_tool_calling_fast_pipeline
-from onyx.chat.turn.models import ChatTurnContext
-from onyx.chat.turn.models import ChatTurnDependencies
 
 
 class TestNonToolCallingFastPipeline:
@@ -18,13 +16,13 @@ class TestNonToolCallingFastPipeline:
     def test_pipeline_disabled_by_default(self) -> None:
         """Test that use_non_tool_calling_fast defaults to False."""
         # Create dependencies with default settings
-        deps = MagicMock(spec=ChatTurnDependencies)
+        deps = MagicMock()
         deps.use_non_tool_calling_fast = False
         assert deps.use_non_tool_calling_fast is False
 
     def test_pipeline_enabled_when_configured(self) -> None:
         """Test that use_non_tool_calling_fast can be enabled."""
-        deps = MagicMock(spec=ChatTurnDependencies)
+        deps = MagicMock()
         deps.use_non_tool_calling_fast = True
         assert deps.use_non_tool_calling_fast is True
 
@@ -46,7 +44,7 @@ class TestNonToolCallingFastPipeline:
         mock_check_tools.return_value = []
 
         # Create mock dependencies
-        deps = MagicMock(spec=ChatTurnDependencies)
+        deps = MagicMock()
         deps.tools = []
         deps.llm.config.model_name = "test-model"
         deps.prompt_config = MagicMock()
@@ -55,7 +53,7 @@ class TestNonToolCallingFastPipeline:
         deps.emitter = MagicMock()
 
         # Create context
-        ctx = MagicMock(spec=ChatTurnContext)
+        ctx = MagicMock()
         ctx.current_run_step = 0
         ctx.should_cite_documents = False
         ctx.current_input_tokens = 0
@@ -106,7 +104,7 @@ class TestNonToolCallingFastPipeline:
         mock_check_tools.return_value = [None]  # No tools should run
 
         # Create mock dependencies
-        deps = MagicMock(spec=ChatTurnDependencies)
+        deps = MagicMock()
         deps.tools = [MagicMock()]  # One tool available
         deps.llm.config.model_name = "test-model"
         deps.prompt_config = MagicMock()
@@ -115,7 +113,7 @@ class TestNonToolCallingFastPipeline:
         deps.emitter = MagicMock()
 
         # Create context
-        ctx = MagicMock(spec=ChatTurnContext)
+        ctx = MagicMock()
         ctx.current_run_step = 0
         ctx.should_cite_documents = False
         ctx.current_input_tokens = 0
@@ -163,15 +161,16 @@ class TestSearchSkippedPacket:
         mock_get_memories.return_value = []
         mock_build_system_message.return_value = MagicMock(content="System message")
 
-        # Create a mock SearchTool
-        mock_search_tool = MagicMock(spec=SearchTool)
+        # Create a mock SearchTool that passes isinstance check
+        mock_search_tool = MagicMock()
+        mock_search_tool.__class__ = SearchTool
         mock_search_tool.name = "search"
 
         # Search tool returns None (skipped)
         mock_check_tools.return_value = [None]
 
         # Create mock dependencies
-        deps = MagicMock(spec=ChatTurnDependencies)
+        deps = MagicMock()
         deps.tools = [mock_search_tool]
         deps.llm.config.model_name = "test-model"
         deps.prompt_config = MagicMock()
@@ -180,7 +179,7 @@ class TestSearchSkippedPacket:
         deps.emitter = MagicMock()
 
         # Create context
-        ctx = MagicMock(spec=ChatTurnContext)
+        ctx = MagicMock()
         ctx.current_run_step = 0
         ctx.should_cite_documents = False
         ctx.current_input_tokens = 0
@@ -235,7 +234,7 @@ class TestSearchSkippedPacket:
         mock_check_tools.return_value = [None]
 
         # Create mock dependencies
-        deps = MagicMock(spec=ChatTurnDependencies)
+        deps = MagicMock()
         deps.tools = [mock_other_tool]
         deps.llm.config.model_name = "test-model"
         deps.prompt_config = MagicMock()
@@ -244,7 +243,7 @@ class TestSearchSkippedPacket:
         deps.emitter = MagicMock()
 
         # Create context
-        ctx = MagicMock(spec=ChatTurnContext)
+        ctx = MagicMock()
         ctx.current_run_step = 0
         ctx.should_cite_documents = False
         ctx.current_input_tokens = 0
@@ -298,8 +297,9 @@ class TestForceSearch:
         mock_get_memories.return_value = []
         mock_build_system_message.return_value = MagicMock(content="System message")
 
-        # Create a mock SearchTool
-        mock_search_tool = MagicMock(spec=SearchTool)
+        # Create a mock SearchTool that passes isinstance check
+        mock_search_tool = MagicMock()
+        mock_search_tool.__class__ = SearchTool
         mock_search_tool.name = "run_search"
         mock_search_tool._NAME = "run_search"
         mock_search_tool.get_args_for_non_tool_calling_llm.return_value = {
@@ -307,7 +307,7 @@ class TestForceSearch:
         }
 
         # Create mock dependencies
-        deps = MagicMock(spec=ChatTurnDependencies)
+        deps = MagicMock()
         deps.tools = [mock_search_tool]
         deps.llm.config.model_name = "test-model"
         deps.prompt_config = MagicMock()
@@ -316,7 +316,7 @@ class TestForceSearch:
         deps.emitter = MagicMock()
 
         # Create context
-        ctx = MagicMock(spec=ChatTurnContext)
+        ctx = MagicMock()
         ctx.current_run_step = 0
         ctx.should_cite_documents = False
         ctx.current_input_tokens = 0
@@ -371,7 +371,7 @@ class TestForceSearch:
         mock_check_tools.return_value = []  # LLM decides no search needed
 
         # Create mock dependencies
-        deps = MagicMock(spec=ChatTurnDependencies)
+        deps = MagicMock()
         deps.tools = []
         deps.llm.config.model_name = "test-model"
         deps.prompt_config = MagicMock()
@@ -380,7 +380,7 @@ class TestForceSearch:
         deps.emitter = MagicMock()
 
         # Create context
-        ctx = MagicMock(spec=ChatTurnContext)
+        ctx = MagicMock()
         ctx.current_run_step = 0
         ctx.should_cite_documents = False
         ctx.current_input_tokens = 0
