@@ -53,6 +53,9 @@ class ChatTurnDependencies:
     emitter: Emitter
     user_or_none: User | None
     prompt_config: PromptConfig
+    # When True, uses programmatic tool execution instead of LLM native function calling.
+    # Configured per-model in the admin settings.
+    use_non_tool_calling_fast: bool = False
 
 
 class FetchedDocumentCacheEntry(BaseModel):

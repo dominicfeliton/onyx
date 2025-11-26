@@ -284,6 +284,41 @@ def create_label(
         )
 
 
+class DefaultSearchPromptsResponse(BaseModel):
+    search_tool_description: str
+    history_rephrase_prompt: str
+    search_decision_prompt: str
+
+
+@basic_router.get("/utils/default-search-prompts")
+def get_default_search_prompts(
+    _: User | None = Depends(current_user),
+) -> DefaultSearchPromptsResponse:
+    """Return the default search prompts for display in the UI"""
+    from onyx.prompts.chat_prompts import (
+        HISTORY_QUERY_REPHRASE,
+        build_aggressive_search_template,
+        AggressiveSearchTemplateParams,
+    )
+    from onyx.tools.tool_implementations.search.search_tool import (
+        SEARCH_TOOL_DESCRIPTION,
+    )
+
+    # Build the search decision template with placeholder variables
+    search_decision = build_aggressive_search_template(
+        AggressiveSearchTemplateParams(
+            chat_history="{chat_history}",
+            final_query="{final_query}",
+        )
+    )
+
+    return DefaultSearchPromptsResponse(
+        search_tool_description=SEARCH_TOOL_DESCRIPTION.strip(),
+        history_rephrase_prompt=HISTORY_QUERY_REPHRASE.strip(),
+        search_decision_prompt=search_decision.strip(),
+    )
+
+
 @admin_router.patch("/label/{label_id}")
 def patch_persona_label(
     label_id: int,

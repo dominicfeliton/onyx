@@ -3,6 +3,7 @@
 import { ArrayHelpers, FieldArray, FormikProps, useField } from "formik";
 import { ModelConfiguration } from "./interfaces";
 import {
+  BooleanFormField,
   ManualErrorMessage,
   SubLabel,
   TextFormField,
@@ -12,6 +13,8 @@ import { useEffect, useState } from "react";
 import CreateButton from "@/refresh-components/buttons/CreateButton";
 import IconButton from "@/refresh-components/buttons/IconButton";
 import SvgX from "@/icons/x";
+import SvgChevronRight from "@/icons/chevron-right";
+import { cn } from "@/lib/utils";
 
 function ModelConfigurationRow({
   name,
@@ -19,12 +22,16 @@ function ModelConfigurationRow({
   arrayHelpers,
   formikProps,
   setError,
+  isAdvancedOpen,
+  onToggleAdvanced,
 }: {
   name: string;
   index: number;
   arrayHelpers: ArrayHelpers;
   formikProps: FormikProps<{ model_configurations: ModelConfiguration[] }>;
   setError: (value: string | null) => void;
+  isAdvancedOpen: boolean;
+  onToggleAdvanced: () => void;
 }) {
   const [, input] = useField(`${name}[${index}]`);
   useEffect(() => {
@@ -33,44 +40,70 @@ function ModelConfigurationRow({
   }, [input.touched, input.error]);
 
   return (
-    <div key={index} className="flex flex-row w-full gap-4">
-      <div
-        className={`flex flex-[2] ${
-          input.touched && input.error ? "border-2 border-error rounded-lg" : ""
-        }`}
-      >
-        <TextFormField
-          name={`${name}[${index}].name`}
-          label=""
-          placeholder={`model-name-${index + 1}`}
-          removeLabel
-          hideError
-        />
+    <div key={index} className="flex flex-col w-full gap-2">
+      <div className="flex flex-row w-full gap-4">
+        <div
+          className={`flex flex-[2] ${
+            input.touched && input.error ? "border-2 border-error rounded-lg" : ""
+          }`}
+        >
+          <TextFormField
+            name={`${name}[${index}].name`}
+            label=""
+            placeholder={`model-name-${index + 1}`}
+            removeLabel
+            hideError
+          />
+        </div>
+        <div className="flex flex-[1]">
+          <TextFormField
+            name={`${name}[${index}].max_input_tokens`}
+            label=""
+            placeholder="Default"
+            removeLabel
+            hideError
+            type="number"
+            min={1}
+          />
+        </div>
+        <div className="flex items-center gap-1 w-28 justify-end">
+          <button
+            type="button"
+            onClick={onToggleAdvanced}
+            className={cn(
+              "flex items-center text-xs px-2 py-1.5 rounded-lg transition-colors",
+              "text-text-500 hover:text-text-700 hover:bg-background-100",
+              isAdvancedOpen && "bg-background-100 text-text-700"
+            )}
+          >
+            <SvgChevronRight
+              className={cn("w-4 h-4 transition-transform", isAdvancedOpen && "rotate-90")}
+            />
+            <span className="ml-1">Advanced</span>
+          </button>
+          <IconButton
+            disabled={formikProps.values.model_configurations.length <= 1}
+            onClick={() => {
+              if (formikProps.values.model_configurations.length > 1) {
+                setError(null);
+                arrayHelpers.remove(index);
+              }
+            }}
+            icon={SvgX}
+            secondary
+          />
+        </div>
       </div>
-      <div className="flex flex-[1]">
-        <TextFormField
-          name={`${name}[${index}].max_input_tokens`}
-          label=""
-          placeholder="Default"
-          removeLabel
-          hideError
-          type="number"
-          min={1}
-        />
-      </div>
-      <div className="flex flex-col justify-center">
-        <IconButton
-          disabled={formikProps.values.model_configurations.length <= 1}
-          onClick={() => {
-            if (formikProps.values.model_configurations.length > 1) {
-              setError(null);
-              arrayHelpers.remove(index);
-            }
-          }}
-          icon={SvgX}
-          secondary
-        />
-      </div>
+      {isAdvancedOpen && (
+        <div className="ml-4 pl-4 border-l-2 border-border-200 py-2">
+          <BooleanFormField
+            name={`${name}[${index}].use_non_tool_calling_fast`}
+            label="Use fast pipeline"
+            subtext="Enable for models that should use tools quickly or don't support native function calling. Uses programmatic tool execution, does not support multi-turn tool calling."
+            small
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -84,6 +117,14 @@ export function ModelConfigurationField({
 }) {
   const [errorMap, setErrorMap] = useState<{ [index: number]: string }>({});
   const [finalError, setFinalError] = useState<string | undefined>();
+  const [advancedOpenMap, setAdvancedOpenMap] = useState<{ [index: number]: boolean }>({});
+
+  const toggleAdvanced = (index: number) => {
+    setAdvancedOpenMap((prev) => ({
+      ...prev,
+      [index]: !prev[index],
+    }));
+  };
 
   return (
     <div className="pb-5 flex flex-col w-full">
@@ -101,7 +142,7 @@ export function ModelConfigurationField({
               <div className="flex">
                 <Label className="flex flex-[2]">Model Name</Label>
                 <Label className="flex flex-[1]">Max Input Tokens</Label>
-                <div className="w-10" />
+                <div className="w-28" />
               </div>
               {formikProps.values.model_configurations.map((_, index) => (
                 <ModelConfigurationRow
@@ -110,6 +151,8 @@ export function ModelConfigurationField({
                   formikProps={formikProps}
                   arrayHelpers={arrayHelpers}
                   index={index}
+                  isAdvancedOpen={advancedOpenMap[index] || false}
+                  onToggleAdvanced={() => toggleAdvanced(index)}
                   setError={(message: string | null) => {
                     const newErrors = { ...errorMap };
                     if (message) {
@@ -147,6 +190,7 @@ export function ModelConfigurationField({
                     is_visible: true,
                     // Use null so Yup.number().nullable() accepts empty inputs
                     max_input_tokens: null,
+                    use_non_tool_calling_fast: false,
                   });
                 }}
                 className="mt-3"

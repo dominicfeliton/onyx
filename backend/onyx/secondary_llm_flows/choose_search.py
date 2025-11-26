@@ -53,6 +53,7 @@ def check_if_need_search(
     history: list[PreviousMessage],
     llm: LLM,
     search_type: SearchType = SearchType.KEYWORD,
+    custom_search_decision_prompt: str | None = None,
 ) -> bool:
     """
     Determines if search is needed based on query and history.
@@ -62,6 +63,8 @@ def check_if_need_search(
         history: List of previous messages
         llm: The language model to use for prediction
         search_type: INTERNET enum for internetsearch. Keyword and semantic are treated the same.
+        custom_search_decision_prompt: Optional custom prompt template.
+            Must contain {chat_history} and {final_query} placeholders.
 
     Returns:
         True if search is needed, False otherwise
@@ -80,10 +83,16 @@ def check_if_need_search(
         messages=history, token_limit=GEN_AI_HISTORY_CUTOFF
     )
 
-    # Note: Internet and internal search use the same prompt
-    prompt_template = build_aggressive_search_template(
-        AggressiveSearchTemplateParams(chat_history=history_str, final_query=query)
-    )
+    # Use custom prompt if provided, otherwise use default
+    if custom_search_decision_prompt:
+        prompt_template = custom_search_decision_prompt.format(
+            chat_history=history_str, final_query=query
+        )
+    else:
+        # Note: Internet and internal search use the same prompt
+        prompt_template = build_aggressive_search_template(
+            AggressiveSearchTemplateParams(chat_history=history_str, final_query=query)
+        )
     prompt_msgs = [
         {
             "role": "user",

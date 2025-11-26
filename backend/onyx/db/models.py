@@ -2456,6 +2456,12 @@ class ModelConfiguration(Base):
 
     supports_image_input: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
 
+    # When enabled, uses programmatic tool execution instead of native LLM function calling.
+    # Useful for models that don't support tool calling natively.
+    use_non_tool_calling_fast: Mapped[bool | None] = mapped_column(
+        Boolean, nullable=True
+    )
+
     llm_provider: Mapped["LLMProvider"] = relationship(
         "LLMProvider",
         back_populates="model_configurations",
@@ -2808,6 +2814,12 @@ class Persona(Base):
         String(length=PROMPT_LENGTH), nullable=True
     )
     datetime_aware: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    # Custom prompts for search behavior (per-assistant customization)
+    # If null, uses defaults from chat_prompts.py or search_tool.py
+    search_tool_description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    history_rephrase_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
+    search_decision_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     uploaded_image_id: Mapped[str | None] = mapped_column(String, nullable=True)
     icon_color: Mapped[str | None] = mapped_column(String, nullable=True)

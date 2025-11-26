@@ -98,10 +98,11 @@ export default function AIMessage({
         return;
       }
 
-      // Toggle logic
-      if (currentFeedback === clickedFeedback) {
+      const isRemoving = currentFeedback === clickedFeedback;
+
+      if (isRemoving) {
         // Clicking same button - remove feedback
-        await handleFeedbackChange(nodeId, null);
+        await handleFeedbackChange(messageId, null);
       }
 
       // Clicking like (will automatically clear dislike if it was active).
@@ -113,12 +114,12 @@ export default function AIMessage({
           // Open modal for positive feedback
           setFeedbackModalProps({
             feedbackType: "like",
-            messageId: nodeId,
+            messageId,
           });
           modal.toggle(true);
         } else {
           // No modal needed - just submit like (this replaces any existing feedback)
-          await handleFeedbackChange(nodeId, "like");
+          await handleFeedbackChange(messageId, "like");
         }
       }
 
@@ -202,7 +203,6 @@ export default function AIMessage({
       PacketType.MESSAGE_START,
       PacketType.SEARCH_TOOL_START,
       PacketType.IMAGE_GENERATION_TOOL_START,
-      PacketType.PYTHON_TOOL_START,
       PacketType.CUSTOM_TOOL_START,
       PacketType.FETCH_TOOL_START,
       PacketType.REASONING_START,
@@ -297,9 +297,7 @@ export default function AIMessage({
         packet.obj.type === PacketType.MESSAGE_START ||
         packet.obj.type === PacketType.MESSAGE_DELTA ||
         packet.obj.type === PacketType.IMAGE_GENERATION_TOOL_START ||
-        packet.obj.type === PacketType.IMAGE_GENERATION_TOOL_DELTA ||
-        packet.obj.type === PacketType.PYTHON_TOOL_START ||
-        packet.obj.type === PacketType.PYTHON_TOOL_DELTA
+        packet.obj.type === PacketType.IMAGE_GENERATION_TOOL_DELTA
       ) {
         finalAnswerComingRef.current = true;
       }

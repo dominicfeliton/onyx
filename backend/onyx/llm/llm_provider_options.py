@@ -478,6 +478,7 @@ def fetch_model_configurations_for_provider(
                 model_name=model_name,
                 model_provider=provider_name,
             ),
+            use_non_tool_calling_fast=False,
         )
         for model_name in fetch_models_for_provider(provider_name)
     ]

@@ -195,6 +195,8 @@ class SearchTool(Tool[SearchToolOverrideKwargs]):
 
     @property
     def description(self) -> str:
+        if self.persona.search_tool_description:
+            return self.persona.search_tool_description
         return self._DESCRIPTION
 
     @property
@@ -248,14 +250,22 @@ class SearchTool(Tool[SearchToolOverrideKwargs]):
         llm: LLM,
         force_run: bool = False,
     ) -> dict[str, Any] | None:
+        # Get custom prompts from persona (None means use defaults)
+        custom_search_decision_prompt = self.persona.search_decision_prompt
+        custom_history_rephrase_prompt = self.persona.history_rephrase_prompt
+
         if not force_run and not check_if_need_search(
-            query=query, history=history, llm=llm
+            query=query,
+            history=history,
+            llm=llm,
+            custom_search_decision_prompt=custom_search_decision_prompt,
         ):
             return None
 
-        rephrased_query = history_based_query_rephrase(
-            query=query, history=history, llm=llm
-        )
+        rephrase_kwargs: dict[str, Any] = {"query": query, "history": history, "llm": llm}
+        if custom_history_rephrase_prompt:
+            rephrase_kwargs["prompt_template"] = custom_history_rephrase_prompt
+        rephrased_query = history_based_query_rephrase(**rephrase_kwargs)
         return {QUERY_FIELD: rephrased_query}
 
     """Actual tool execution"""

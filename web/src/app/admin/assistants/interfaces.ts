@@ -42,6 +42,11 @@ export interface Persona extends MinimalPersonaSnapshot {
   system_prompt: string | null;
   task_prompt: string | null;
   datetime_aware: boolean;
+
+  // Custom search prompts (per-assistant)
+  search_tool_description: string | null;
+  history_rephrase_prompt: string | null;
+  search_decision_prompt: string | null;
 }
 
 export interface FullPersona extends Persona {

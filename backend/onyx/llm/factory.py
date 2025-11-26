@@ -199,17 +199,36 @@ def get_llms_for_persona(
     return _create_llm(model), _create_llm(fast_model)
 
 
+def _get_use_non_tool_calling_fast_for_model(
+    llm_provider: LLMProviderView, model_name: str
+) -> bool:
+    """Look up the use_non_tool_calling_fast setting for a specific model.
+
+    Args:
+        llm_provider: The LLM provider view containing model configurations
+        model_name: The name of the model to look up
+
+    Returns:
+        True if use_non_tool_calling_fast is enabled for this model, False otherwise
+    """
+    for model_config in llm_provider.model_configurations:
+        if model_config.name == model_name:
+            return model_config.use_non_tool_calling_fast
+    return False
+
+
 def get_llm_model_and_settings_for_persona(
     persona: Persona,
     llm_override: LLMOverride | None = None,
     additional_headers: dict[str, str] | None = None,
     timeout: int | None = None,
-) -> tuple[Model, ModelSettings]:
+) -> tuple[Model, ModelSettings, bool]:
     """Get LitellmModel and settings for a persona.
 
     Returns a tuple of:
     - LitellmModel instance
     - ModelSettings configured with the persona's parameters
+    - use_non_tool_calling_fast: Whether to use programmatic tool execution
     """
     provider_name_override = llm_override.model_provider if llm_override else None
     model_version_override = llm_override.model_version if llm_override else None
@@ -235,16 +254,24 @@ def get_llm_model_and_settings_for_persona(
     if not llm_provider:
         raise ValueError("No LLM provider found")
 
-    return _get_llm_model_and_settings(
-        provider=llm_provider.provider,
-        model=model,
-        deployment_name=llm_provider.deployment_name,
-        api_key=llm_provider.api_key,
-        api_base=llm_provider.api_base,
-        custom_config=llm_provider.custom_config,
-        temperature=temperature_override,
-        timeout=timeout,
-        additional_headers=additional_headers,
+    # Look up use_non_tool_calling_fast for the selected model
+    use_non_tool_calling_fast = _get_use_non_tool_calling_fast_for_model(
+        llm_provider, model
+    )
+
+    return (
+        *_get_llm_model_and_settings(
+            provider=llm_provider.provider,
+            model=model,
+            deployment_name=llm_provider.deployment_name,
+            api_key=llm_provider.api_key,
+            api_base=llm_provider.api_base,
+            custom_config=llm_provider.custom_config,
+            temperature=temperature_override,
+            timeout=timeout,
+            additional_headers=additional_headers,
+        ),
+        use_non_tool_calling_fast,
     )
 
 

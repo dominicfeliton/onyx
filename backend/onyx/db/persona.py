@@ -282,6 +282,9 @@ def create_update_persona(
             llm_filter_extraction=create_persona_request.llm_filter_extraction,
             is_default_persona=create_persona_request.is_default_persona,
             user_file_ids=converted_user_file_ids,
+            search_tool_description=create_persona_request.search_tool_description,
+            history_rephrase_prompt=create_persona_request.history_rephrase_prompt,
+            search_decision_prompt=create_persona_request.search_decision_prompt,
         )
 
         versioned_make_persona_private = fetch_versioned_implementation(
@@ -523,6 +526,9 @@ def upsert_persona(
     user_file_ids: list[UUID] | None = None,
     chunks_above: int = CONTEXT_CHUNKS_ABOVE,
     chunks_below: int = CONTEXT_CHUNKS_BELOW,
+    search_tool_description: str | None = None,
+    history_rephrase_prompt: str | None = None,
+    search_decision_prompt: str | None = None,
 ) -> Persona:
     """
     NOTE: This operation cannot update persona configuration options that
@@ -633,6 +639,11 @@ def upsert_persona(
         if datetime_aware is not None:
             existing_persona.datetime_aware = datetime_aware
 
+        # Update custom search prompts (None means use default, so we always update)
+        existing_persona.search_tool_description = search_tool_description
+        existing_persona.history_rephrase_prompt = history_rephrase_prompt
+        existing_persona.search_decision_prompt = search_decision_prompt
+
         # Do not delete any associations manually added unless
         # a new updated list is provided
         if document_sets is not None:
@@ -688,6 +699,9 @@ def upsert_persona(
             ),
             user_files=user_files or [],
             labels=labels or [],
+            search_tool_description=search_tool_description,
+            history_rephrase_prompt=history_rephrase_prompt,
+            search_decision_prompt=search_decision_prompt,
         )
         db_session.add(new_persona)
         persona = new_persona

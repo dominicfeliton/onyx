@@ -70,8 +70,17 @@ export function CustomLLMProviderUpdateForm({
       (modelConfiguration) => ({
         ...modelConfiguration,
         max_input_tokens: modelConfiguration.max_input_tokens ?? null,
+        use_non_tool_calling_fast:
+          modelConfiguration.use_non_tool_calling_fast ?? false,
       })
-    ) ?? [{ name: "", is_visible: true, max_input_tokens: null }],
+    ) ?? [
+      {
+        name: "",
+        is_visible: true,
+        max_input_tokens: null,
+        use_non_tool_calling_fast: false,
+      },
+    ],
     custom_config_list: existingLlmProvider?.custom_config
       ? Object.entries(existingLlmProvider.custom_config)
       : [],
@@ -130,6 +139,8 @@ export function CustomLLMProviderUpdateForm({
                 ? null
                 : modelConfiguration.max_input_tokens,
             supports_image_input: false, // doesn't matter, not used
+            use_non_tool_calling_fast:
+              modelConfiguration.use_non_tool_calling_fast ?? false,
           })
         );
         finalValues.api_key_changed = values.api_key !== initialValues.api_key;

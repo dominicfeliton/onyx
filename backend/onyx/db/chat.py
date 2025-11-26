@@ -7,6 +7,7 @@ from typing import Tuple
 from uuid import UUID
 
 from fastapi import HTTPException
+from sqlalchemy import and_
 from sqlalchemy import delete
 from sqlalchemy import desc
 from sqlalchemy import func
@@ -240,7 +241,13 @@ def delete_messages_and_files_from_chat_session(
 
         file_store = get_default_file_store()
         for file_info in files or []:
-            file_store.delete_file(file_id=file_info.get("id"))
+            try:
+                file_store.delete_file(file_id=file_info.get("id"))
+            except Exception as e:
+                # File may have already been deleted or not exist
+                logger.warning(
+                    f"Failed to delete file {file_info.get('id')} during chat cleanup: {e}"
+                )
 
     # Delete ChatMessage records - CASCADE constraints will automatically handle:
     # - AgentSubQuery records (via AgentSubQuestion)
@@ -411,7 +418,10 @@ def get_chat_sessions_older_than(
     cutoff_time = datetime.utcnow() - timedelta(days=days_old)
     old_sessions: Sequence[Row[Tuple[UUID | None, UUID]]] = db_session.execute(
         select(ChatSession.user_id, ChatSession.id).where(
-            ChatSession.time_created < cutoff_time
+            and_(
+                ChatSession.time_created < cutoff_time,
+                or_(ChatSession.folder_id.is_(None), ChatSession.deleted.is_(True)),
+            )
         )
     ).fetchall()
 
@@ -844,7 +854,7 @@ def create_db_search_doc(
     )
 
     db_session.add(db_search_doc)
-    db_session.commit()
+    db_session.flush()
     return db_search_doc
 
 
@@ -962,9 +972,16 @@ def translate_db_message_to_chat_message_detail(
     # Get current feedback if any
     current_feedback = None
     if chat_message.chat_message_feedbacks:
-        latest_feedback = chat_message.chat_message_feedbacks[-1]
-        if latest_feedback.is_positive is not None:
-            current_feedback = "like" if latest_feedback.is_positive else "dislike"
+        # Pick the most recent feedback with a like/dislike flag (highest id wins)
+        latest_scored_feedback = max(
+            (fb for fb in chat_message.chat_message_feedbacks if fb.is_positive is not None),
+            key=lambda fb: fb.id or 0,
+            default=None,
+        )
+        if latest_scored_feedback:
+            current_feedback = (
+                "like" if latest_scored_feedback.is_positive else "dislike"
+            )
 
     chat_msg_detail = ChatMessageDetail(
         chat_session_id=chat_message.chat_session_id,

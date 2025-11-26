@@ -141,6 +141,7 @@ export function ActionsTable({
               <TableRow key={`tool-${tool.id}`}>
                 <TableCell>
                   <div className="flex items-center gap-2">
+                    {/* Show edit icon for custom tools */}
                     {canModifyTool && (
                       <IconButton
                         icon={SvgEdit}

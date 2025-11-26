@@ -323,6 +323,8 @@ export function LLMProviderUpdateForm({
               is_visible: visibleModels.includes(modelConfiguration.name),
               max_input_tokens: modelConfiguration.max_input_tokens ?? null,
               supports_image_input: modelConfiguration.supports_image_input,
+              use_non_tool_calling_fast:
+                modelConfiguration.use_non_tool_calling_fast ?? false,
             })
           ),
         };

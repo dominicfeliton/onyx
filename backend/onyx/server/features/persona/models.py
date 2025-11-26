@@ -85,6 +85,11 @@ class PersonaUpsertRequest(BaseModel):
     task_prompt: str
     datetime_aware: bool
 
+    # Custom search prompts (per-assistant customization)
+    search_tool_description: str | None = None
+    history_rephrase_prompt: str | None = None
+    search_decision_prompt: str | None = None
+
 
 class MinimalPersonaSnapshot(BaseModel):
     """Minimal persona model optimized for ChatPage.tsx - only includes fields actually used"""
@@ -191,6 +196,11 @@ class PersonaSnapshot(BaseModel):
     task_prompt: str | None = None
     datetime_aware: bool = True
 
+    # Custom search prompts (per-assistant customization)
+    search_tool_description: str | None = None
+    history_rephrase_prompt: str | None = None
+    search_decision_prompt: str | None = None
+
     @classmethod
     def from_model(cls, persona: Persona) -> "PersonaSnapshot":
         return PersonaSnapshot(
@@ -235,6 +245,9 @@ class PersonaSnapshot(BaseModel):
             system_prompt=persona.system_prompt,
             task_prompt=persona.task_prompt,
             datetime_aware=persona.datetime_aware,
+            search_tool_description=persona.search_tool_description,
+            history_rephrase_prompt=persona.history_rephrase_prompt,
+            search_decision_prompt=persona.search_decision_prompt,
         )
 
 
@@ -299,6 +312,9 @@ class FullPersonaSnapshot(PersonaSnapshot):
             system_prompt=persona.system_prompt,
             task_prompt=persona.task_prompt,
             datetime_aware=persona.datetime_aware,
+            search_tool_description=persona.search_tool_description,
+            history_rephrase_prompt=persona.history_rephrase_prompt,
+            search_decision_prompt=persona.search_decision_prompt,
         )
 
 

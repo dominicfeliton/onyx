@@ -104,6 +104,8 @@ export const dynamicProviderConfigs: Record<
           is_visible: existingConfig?.is_visible ?? false,
           max_input_tokens: null,
           supports_image_input: existingConfig?.supports_image_input ?? null,
+          use_non_tool_calling_fast:
+            existingConfig?.use_non_tool_calling_fast ?? false,
         };
       }),
     getModelNames: (data: string[]) => data,
@@ -127,6 +129,8 @@ export const dynamicProviderConfigs: Record<
           is_visible: existingConfig?.is_visible ?? true,
           max_input_tokens: modelData.max_input_tokens,
           supports_image_input: modelData.supports_image_input,
+          use_non_tool_calling_fast:
+            existingConfig?.use_non_tool_calling_fast ?? false,
         };
       }),
     getModelNames: (data: OllamaModelResponse[]) =>
@@ -153,6 +157,8 @@ export const dynamicProviderConfigs: Record<
           is_visible: existingConfig?.is_visible ?? true,
           max_input_tokens: modelData.max_input_tokens,
           supports_image_input: modelData.supports_image_input,
+          use_non_tool_calling_fast:
+            existingConfig?.use_non_tool_calling_fast ?? false,
         };
       }),
     getModelNames: (data: OllamaModelResponse[]) => data.map((m) => m.name),

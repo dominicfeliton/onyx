@@ -34,6 +34,7 @@ export interface ModelConfiguration {
   is_visible: boolean;
   max_input_tokens: number | null;
   supports_image_input: boolean | null;
+  use_non_tool_calling_fast: boolean | null;
 }
 
 export interface WellKnownLLMProviderDescriptor {

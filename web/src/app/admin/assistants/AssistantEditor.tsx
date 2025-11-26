@@ -232,6 +232,13 @@ export default function AssistantEditor({
   const imageGenerationTool = findImageGenerationTool(tools);
   const webSearchTool = findWebSearchTool(tools);
 
+  // Fetch default search prompts for placeholder display
+  const { data: defaultSearchPrompts } = useSWR<{
+    search_tool_description: string;
+    history_rephrase_prompt: string;
+    search_decision_prompt: string;
+  }>("/api/persona/utils/default-search-prompts", errorHandlingFetcher);
+
   const enabledToolsMap: { [key: number]: boolean } = {};
   tools.forEach((tool) => {
     enabledToolsMap[tool.id] = personaCurrentToolIds.includes(tool.id);
@@ -295,6 +302,10 @@ export default function AssistantEditor({
           ? "user_files"
           : "team_knowledge",
     is_default_persona: existingPersona?.is_default_persona ?? false,
+    // Custom search prompts
+    search_tool_description: existingPersona?.search_tool_description ?? "",
+    history_rephrase_prompt: existingPersona?.history_rephrase_prompt ?? "",
+    search_decision_prompt: existingPersona?.search_decision_prompt ?? "",
   };
 
   interface AssistantPrompt {
@@ -1697,6 +1708,150 @@ export default function AssistantEditor({
                     <Separator />
 
                     <TaskPromptField />
+
+                    {searchTool && values.enabled_tools_map[searchTool.id] && (
+                      <>
+                        <Separator />
+
+                        <div className="flex flex-col gap-y-4">
+                          <h3 className="font-medium text-sm">
+                            Internal Search Settings
+                          </h3>
+                          <p className="text-sm text-text-dark">
+                            Customize how this assistant handles search
+                            operations. Leave empty to use default prompts.
+                          </p>
+
+                          <div>
+                            <TextFormField
+                              name="search_tool_description"
+                              label="Search Tool Description"
+                              subtext={
+                                <>
+                                  Customize when the LLM should call the
+                                  internal search tool. Used by tool-calling
+                                  models.
+                                </>
+                              }
+                              isTextArea
+                              placeholder={
+                                defaultSearchPrompts?.search_tool_description ||
+                                "Loading default..."
+                              }
+                            />
+                            {defaultSearchPrompts?.search_tool_description &&
+                              !values.search_tool_description && (
+                                <button
+                                  type="button"
+                                  className="text-xs text-link hover:underline mt-1"
+                                  onClick={() =>
+                                    setFieldValue(
+                                      "search_tool_description",
+                                      defaultSearchPrompts.search_tool_description
+                                    )
+                                  }
+                                >
+                                  Copy default to edit
+                                </button>
+                              )}
+                          </div>
+
+                          <div>
+                            <TextFormField
+                              name="search_decision_prompt"
+                              label="Search Decision Prompt (Non-Tool-Calling)"
+                              subtext={
+                                <>
+                                  Customize when the assistant decides to search
+                                  vs skip. Used by non-tool-calling models.
+                                  <br />
+                                  Available variables:{" "}
+                                  <code className="bg-background-100 px-1 rounded">
+                                    {"{chat_history}"}
+                                  </code>
+                                  ,{" "}
+                                  <code className="bg-background-100 px-1 rounded">
+                                    {"{final_query}"}
+                                  </code>
+                                  <br />
+                                  Required response values:{" "}
+                                  <code className="bg-background-100 px-1 rounded">
+                                    Yes Search
+                                  </code>{" "}
+                                  or{" "}
+                                  <code className="bg-background-100 px-1 rounded">
+                                    Skip Search
+                                  </code>
+                                </>
+                              }
+                              isTextArea
+                              placeholder={
+                                defaultSearchPrompts?.search_decision_prompt ||
+                                "Loading default prompt..."
+                              }
+                            />
+                            {defaultSearchPrompts?.search_decision_prompt &&
+                              !values.search_decision_prompt && (
+                                <button
+                                  type="button"
+                                  className="text-xs text-link hover:underline mt-1"
+                                  onClick={() =>
+                                    setFieldValue(
+                                      "search_decision_prompt",
+                                      defaultSearchPrompts.search_decision_prompt
+                                    )
+                                  }
+                                >
+                                  Copy default to edit
+                                </button>
+                              )}
+                          </div>
+
+                          <div>
+                            <TextFormField
+                              name="history_rephrase_prompt"
+                              label="History Rephrase Prompt (Non-Tool-Calling)"
+                              subtext={
+                                <>
+                                  Customize how queries are rephrased based on
+                                  conversation history. Used by non-tool-calling
+                                  models.
+                                  <br />
+                                  Available variables:{" "}
+                                  <code className="bg-background-100 px-1 rounded">
+                                    {"{chat_history}"}
+                                  </code>
+                                  ,{" "}
+                                  <code className="bg-background-100 px-1 rounded">
+                                    {"{question}"}
+                                  </code>
+                                </>
+                              }
+                              isTextArea
+                              placeholder={
+                                defaultSearchPrompts?.history_rephrase_prompt ||
+                                "Loading default prompt..."
+                              }
+                            />
+                            {defaultSearchPrompts?.history_rephrase_prompt &&
+                              !values.history_rephrase_prompt && (
+                                <button
+                                  type="button"
+                                  className="text-xs text-link hover:underline mt-1"
+                                  onClick={() =>
+                                    setFieldValue(
+                                      "history_rephrase_prompt",
+                                      defaultSearchPrompts.history_rephrase_prompt
+                                    )
+                                  }
+                                >
+                                  Copy default to edit
+                                </button>
+                              )}
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </>
                 )}
 

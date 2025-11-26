@@ -28,6 +28,9 @@ interface PersonaUpsertRequest {
   display_priority: number | null;
   label_ids: number[] | null;
   user_file_ids: string[] | null;
+  search_tool_description: string | null;
+  history_rephrase_prompt: string | null;
+  search_decision_prompt: string | null;
 }
 
 export interface PersonaUpsertParameters {
@@ -54,6 +57,9 @@ export interface PersonaUpsertParameters {
   is_default_persona: boolean;
   label_ids: number[] | null;
   user_file_ids: string[];
+  search_tool_description: string | null;
+  history_rephrase_prompt: string | null;
+  search_decision_prompt: string | null;
 }
 
 export const createPersonaLabel = (name: string) => {
@@ -111,6 +117,9 @@ function buildPersonaUpsertRequest(
     remove_image,
     search_start_date,
     user_file_ids,
+    search_tool_description,
+    history_rephrase_prompt,
+    search_decision_prompt,
   } = creationRequest;
 
   return {
@@ -142,6 +151,9 @@ function buildPersonaUpsertRequest(
     display_priority: null,
     label_ids: creationRequest.label_ids ?? null,
     user_file_ids: user_file_ids ?? null,
+    search_tool_description: search_tool_description || null,
+    history_rephrase_prompt: history_rephrase_prompt || null,
+    search_decision_prompt: search_decision_prompt || null,
   };
 }
 

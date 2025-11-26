@@ -162,6 +162,7 @@ class ModelConfigurationUpsertRequest(BaseModel):
     is_visible: bool
     max_input_tokens: int | None = None
     supports_image_input: bool | None = None
+    use_non_tool_calling_fast: bool | None = None
 
     @classmethod
     def from_model(
@@ -172,6 +173,7 @@ class ModelConfigurationUpsertRequest(BaseModel):
             is_visible=model_configuration_model.is_visible,
             max_input_tokens=model_configuration_model.max_input_tokens,
             supports_image_input=model_configuration_model.supports_image_input,
+            use_non_tool_calling_fast=model_configuration_model.use_non_tool_calling_fast,
         )
 
 
@@ -180,6 +182,7 @@ class ModelConfigurationView(BaseModel):
     is_visible: bool
     max_input_tokens: int | None = None
     supports_image_input: bool
+    use_non_tool_calling_fast: bool
 
     @classmethod
     def from_model(
@@ -204,6 +207,8 @@ class ModelConfigurationView(BaseModel):
                     model_configuration_model.name, provider_name
                 )
             ),
+            use_non_tool_calling_fast=model_configuration_model.use_non_tool_calling_fast
+            or False,
         )
 
 

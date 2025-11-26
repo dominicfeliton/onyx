@@ -834,11 +834,13 @@ def stream_chat_message_objects(
             project_instructions=project_instructions,
         )
         if not simple_agent_framework_disabled:
-            llm_model, model_settings = get_llm_model_and_settings_for_persona(
-                persona=persona,
-                llm_override=(new_msg_req.llm_override or chat_session.llm_override),
-                additional_headers=litellm_additional_headers,
-                timeout=None,  # Will use default timeout logic
+            llm_model, model_settings, use_non_tool_calling_fast = (
+                get_llm_model_and_settings_for_persona(
+                    persona=persona,
+                    llm_override=(new_msg_req.llm_override or chat_session.llm_override),
+                    additional_headers=litellm_additional_headers,
+                    timeout=None,  # Will use default timeout logic
+                )
             )
             yield from _fast_message_stream(
                 answer,
@@ -851,6 +853,7 @@ def stream_chat_message_objects(
                 llm_model,
                 model_settings,
                 user,
+                use_non_tool_calling_fast,
             )
         else:
             from onyx.chat.packet_proccessing import process_streamed_packets
@@ -940,6 +943,7 @@ def _fast_message_stream(
     llm_model: Model,
     model_settings: ModelSettings,
     user_or_none: User | None,
+    use_non_tool_calling_fast: bool = False,
 ) -> Generator[Packet, None, None]:
     # TODO: clean up this jank
     is_responses_api = isinstance(llm_model, OpenAIResponsesModel)
@@ -966,6 +970,7 @@ def _fast_message_stream(
             emitter=emitter,
             user_or_none=user_or_none,
             prompt_config=prompt_config,
+            use_non_tool_calling_fast=use_non_tool_calling_fast,
         ),
         chat_session_id=chat_session_id,
         message_id=reserved_message_id,
