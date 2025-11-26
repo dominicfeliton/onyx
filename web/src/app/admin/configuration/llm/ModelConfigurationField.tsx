@@ -44,7 +44,9 @@ function ModelConfigurationRow({
       <div className="flex flex-row w-full gap-4">
         <div
           className={`flex flex-[2] ${
-            input.touched && input.error ? "border-2 border-error rounded-lg" : ""
+            input.touched && input.error
+              ? "border-2 border-error rounded-lg"
+              : ""
           }`}
         >
           <TextFormField
@@ -77,7 +79,10 @@ function ModelConfigurationRow({
             )}
           >
             <SvgChevronRight
-              className={cn("w-4 h-4 transition-transform", isAdvancedOpen && "rotate-90")}
+              className={cn(
+                "w-4 h-4 transition-transform",
+                isAdvancedOpen && "rotate-90"
+              )}
             />
             <span className="ml-1">Advanced</span>
           </button>
@@ -117,7 +122,9 @@ export function ModelConfigurationField({
 }) {
   const [errorMap, setErrorMap] = useState<{ [index: number]: string }>({});
   const [finalError, setFinalError] = useState<string | undefined>();
-  const [advancedOpenMap, setAdvancedOpenMap] = useState<{ [index: number]: boolean }>({});
+  const [advancedOpenMap, setAdvancedOpenMap] = useState<{
+    [index: number]: boolean;
+  }>({});
 
   const toggleAdvanced = (index: number) => {
     setAdvancedOpenMap((prev) => ({

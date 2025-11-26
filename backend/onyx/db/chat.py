@@ -974,7 +974,11 @@ def translate_db_message_to_chat_message_detail(
     if chat_message.chat_message_feedbacks:
         # Pick the most recent feedback with a like/dislike flag (highest id wins)
         latest_scored_feedback = max(
-            (fb for fb in chat_message.chat_message_feedbacks if fb.is_positive is not None),
+            (
+                fb
+                for fb in chat_message.chat_message_feedbacks
+                if fb.is_positive is not None
+            ),
             key=lambda fb: fb.id or 0,
             default=None,
         )

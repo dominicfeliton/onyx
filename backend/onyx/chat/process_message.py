@@ -837,7 +837,9 @@ def stream_chat_message_objects(
             llm_model, model_settings, use_non_tool_calling_fast = (
                 get_llm_model_and_settings_for_persona(
                     persona=persona,
-                    llm_override=(new_msg_req.llm_override or chat_session.llm_override),
+                    llm_override=(
+                        new_msg_req.llm_override or chat_session.llm_override
+                    ),
                     additional_headers=litellm_additional_headers,
                     timeout=None,  # Will use default timeout logic
                 )

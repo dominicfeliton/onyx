@@ -3,11 +3,9 @@
 This tests the _run_non_tool_calling_fast_pipeline function which provides
 programmatic tool execution for models that don't support native function calling.
 """
-import json
+
 from unittest.mock import MagicMock
 from unittest.mock import patch
-
-import pytest
 
 from onyx.chat.turn.fast_chat_turn import _run_non_tool_calling_fast_pipeline
 from onyx.chat.turn.models import ChatTurnContext
@@ -32,7 +30,9 @@ class TestNonToolCallingFastPipeline:
 
     @patch("onyx.chat.turn.fast_chat_turn.get_memories")
     @patch("onyx.chat.turn.fast_chat_turn.default_build_system_message_v2")
-    @patch("onyx.chat.turn.fast_chat_turn.check_which_tools_should_run_for_non_tool_calling_llm")
+    @patch(
+        "onyx.chat.turn.fast_chat_turn.check_which_tools_should_run_for_non_tool_calling_llm"
+    )
     def test_pipeline_extracts_query_from_user_message(
         self,
         mock_check_tools: MagicMock,
@@ -75,7 +75,7 @@ class TestNonToolCallingFastPipeline:
         prompt_config = MagicMock()
 
         # Call the pipeline
-        result = _run_non_tool_calling_fast_pipeline(
+        _run_non_tool_calling_fast_pipeline(
             dependencies=deps,
             chat_history=[],
             current_user_message=user_message,
@@ -90,7 +90,9 @@ class TestNonToolCallingFastPipeline:
 
     @patch("onyx.chat.turn.fast_chat_turn.get_memories")
     @patch("onyx.chat.turn.fast_chat_turn.default_build_system_message_v2")
-    @patch("onyx.chat.turn.fast_chat_turn.check_which_tools_should_run_for_non_tool_calling_llm")
+    @patch(
+        "onyx.chat.turn.fast_chat_turn.check_which_tools_should_run_for_non_tool_calling_llm"
+    )
     def test_pipeline_returns_empty_list_when_no_tools_should_run(
         self,
         mock_check_tools: MagicMock,
@@ -139,6 +141,141 @@ class TestNonToolCallingFastPipeline:
         assert result == []
 
 
+class TestSearchSkippedPacket:
+    """Tests for SearchSkipped packet emission."""
+
+    @patch("onyx.chat.turn.fast_chat_turn.get_memories")
+    @patch("onyx.chat.turn.fast_chat_turn.default_build_system_message_v2")
+    @patch(
+        "onyx.chat.turn.fast_chat_turn.check_which_tools_should_run_for_non_tool_calling_llm"
+    )
+    def test_search_skipped_packet_emitted_when_search_tool_skipped(
+        self,
+        mock_check_tools: MagicMock,
+        mock_build_system_message: MagicMock,
+        mock_get_memories: MagicMock,
+    ) -> None:
+        """Test that SearchSkipped packet is emitted when SearchTool is skipped."""
+        from onyx.tools.tool_implementations.search.search_tool import SearchTool
+        from onyx.server.query_and_chat.streaming_models import SearchSkipped
+
+        # Setup mocks
+        mock_get_memories.return_value = []
+        mock_build_system_message.return_value = MagicMock(content="System message")
+
+        # Create a mock SearchTool
+        mock_search_tool = MagicMock(spec=SearchTool)
+        mock_search_tool.name = "search"
+
+        # Search tool returns None (skipped)
+        mock_check_tools.return_value = [None]
+
+        # Create mock dependencies
+        deps = MagicMock(spec=ChatTurnDependencies)
+        deps.tools = [mock_search_tool]
+        deps.llm.config.model_name = "test-model"
+        deps.prompt_config = MagicMock()
+        deps.user_or_none = None
+        deps.db_session = MagicMock()
+        deps.emitter = MagicMock()
+
+        # Create context
+        ctx = MagicMock(spec=ChatTurnContext)
+        ctx.current_run_step = 0
+        ctx.should_cite_documents = False
+        ctx.current_input_tokens = 0
+        ctx.fetched_documents_cache = {}
+
+        user_message = {
+            "role": "user",
+            "content": [{"type": "input_text", "text": "Hello, how are you?"}],
+        }
+
+        prompt_config = MagicMock()
+
+        # Call the pipeline
+        _run_non_tool_calling_fast_pipeline(
+            dependencies=deps,
+            chat_history=[],
+            current_user_message=user_message,
+            ctx=ctx,
+            prompt_config=prompt_config,
+        )
+
+        # Verify that SearchSkipped packet was emitted
+        emit_calls = deps.emitter.emit.call_args_list
+        search_skipped_emitted = any(
+            isinstance(call[0][0].obj, SearchSkipped) for call in emit_calls
+        )
+        assert (
+            search_skipped_emitted
+        ), "SearchSkipped packet should be emitted when search is skipped"
+
+    @patch("onyx.chat.turn.fast_chat_turn.get_memories")
+    @patch("onyx.chat.turn.fast_chat_turn.default_build_system_message_v2")
+    @patch(
+        "onyx.chat.turn.fast_chat_turn.check_which_tools_should_run_for_non_tool_calling_llm"
+    )
+    def test_search_skipped_packet_not_emitted_when_search_runs(
+        self,
+        mock_check_tools: MagicMock,
+        mock_build_system_message: MagicMock,
+        mock_get_memories: MagicMock,
+    ) -> None:
+        """Test that SearchSkipped packet is NOT emitted when search tool runs."""
+        from onyx.server.query_and_chat.streaming_models import SearchSkipped
+
+        # Setup mocks
+        mock_get_memories.return_value = []
+        mock_build_system_message.return_value = MagicMock(content="System message")
+
+        # Non-SearchTool returns None (skipped)
+        mock_other_tool = MagicMock()
+        mock_other_tool.name = "other_tool"
+        mock_check_tools.return_value = [None]
+
+        # Create mock dependencies
+        deps = MagicMock(spec=ChatTurnDependencies)
+        deps.tools = [mock_other_tool]
+        deps.llm.config.model_name = "test-model"
+        deps.prompt_config = MagicMock()
+        deps.user_or_none = None
+        deps.db_session = MagicMock()
+        deps.emitter = MagicMock()
+
+        # Create context
+        ctx = MagicMock(spec=ChatTurnContext)
+        ctx.current_run_step = 0
+        ctx.should_cite_documents = False
+        ctx.current_input_tokens = 0
+        ctx.fetched_documents_cache = {}
+
+        user_message = {
+            "role": "user",
+            "content": [{"type": "input_text", "text": "Hello"}],
+        }
+
+        prompt_config = MagicMock()
+
+        # Call the pipeline
+        _run_non_tool_calling_fast_pipeline(
+            dependencies=deps,
+            chat_history=[],
+            current_user_message=user_message,
+            ctx=ctx,
+            prompt_config=prompt_config,
+        )
+
+        # Verify that SearchSkipped packet was NOT emitted (no SearchTool)
+        emit_calls = deps.emitter.emit.call_args_list
+        search_skipped_emitted = any(
+            isinstance(call[0][0].obj, SearchSkipped) for call in emit_calls
+        )
+        assert (
+            not search_skipped_emitted
+        ), "SearchSkipped packet should NOT be emitted when no SearchTool is skipped"
+
+
 class TestEmptyResponseRetry:
     """Tests for empty response retry logic."""
 
@@ -146,13 +283,11 @@ class TestEmptyResponseRetry:
         """Test that empty response retries are limited to 5."""
         # This is tested implicitly through the _run_agent_loop function
         # The retry logic limits retries to 5 attempts
-        pass
 
     def test_image_generation_skips_retry(self) -> None:
         """Test that image generation tools skip the empty response retry."""
         # This is tested implicitly through the _run_agent_loop function
         # When image_generation tool is detected, retry is skipped
-        pass
 
 
 class TestModelConfigurationLookup:
@@ -196,5 +331,7 @@ class TestModelConfigurationLookup:
         mock_provider = MagicMock()
         mock_provider.model_configurations = []
 
-        result = _get_use_non_tool_calling_fast_for_model(mock_provider, "unknown-model")
+        result = _get_use_non_tool_calling_fast_for_model(
+            mock_provider, "unknown-model"
+        )
         assert result is False

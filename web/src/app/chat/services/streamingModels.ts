@@ -16,6 +16,7 @@ export enum PacketType {
   // Specific tool packets
   SEARCH_TOOL_START = "internal_search_tool_start",
   SEARCH_TOOL_DELTA = "internal_search_tool_delta",
+  SEARCH_SKIPPED = "search_skipped",
   IMAGE_GENERATION_TOOL_START = "image_generation_tool_start",
   IMAGE_GENERATION_TOOL_DELTA = "image_generation_tool_delta",
   PYTHON_TOOL_START = "python_tool_start",
@@ -73,6 +74,11 @@ export interface SearchToolDelta extends BaseObj {
   type: "internal_search_tool_delta";
   queries: string[] | null;
   documents: OnyxDocument[] | null;
+}
+
+export interface SearchSkipped extends BaseObj {
+  type: "search_skipped";
+  reason: string;
 }
 
 export type ImageShape = "square" | "landscape" | "portrait";
@@ -157,7 +163,11 @@ export type StopObj = Stop;
 export type SectionEndObj = SectionEnd;
 
 // Specific tool objects
-export type SearchToolObj = SearchToolStart | SearchToolDelta | SectionEnd;
+export type SearchToolObj =
+  | SearchToolStart
+  | SearchToolDelta
+  | SearchSkipped
+  | SectionEnd;
 export type ImageGenerationToolObj =
   | ImageGenerationToolStart
   | ImageGenerationToolDelta

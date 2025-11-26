@@ -21,6 +21,8 @@ export interface FullChatState {
   setPresentingDocument?: (document: MinimalOnyxDocument) => void;
   // Regenerate functionality
   regenerate?: (modelOverRide: LlmDescriptor) => Promise<void>;
+  // Force search regenerate (for non-tool-calling LLMs that skipped search)
+  handleForceSearch?: () => Promise<void>;
   overriddenModel?: string;
   researchType?: string | null;
 }

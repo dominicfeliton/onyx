@@ -67,6 +67,7 @@ from onyx.server.query_and_chat.streaming_models import Packet
 from onyx.server.query_and_chat.streaming_models import PacketObj
 from onyx.server.query_and_chat.streaming_models import ReasoningDelta
 from onyx.server.query_and_chat.streaming_models import ReasoningStart
+from onyx.server.query_and_chat.streaming_models import SearchSkipped
 from onyx.server.query_and_chat.streaming_models import SearchToolDelta
 from onyx.server.query_and_chat.streaming_models import SearchToolStart
 from onyx.server.query_and_chat.streaming_models import SectionEnd
@@ -236,6 +237,18 @@ def _run_non_tool_calling_fast_pipeline(
         list(dependencies.tools), query, history, dependencies.llm
     )
 
+    # Check if search was skipped and emit SearchSkipped packet for UI
+    for tool, tool_args in zip(dependencies.tools, tool_args_list, strict=False):
+        if isinstance(tool, SearchTool) and tool_args is None:
+            logger.info("[FAST] Search was skipped - emitting SearchSkipped packet")
+            dependencies.emitter.emit(
+                Packet(
+                    ind=ctx.current_run_step,
+                    obj=SearchSkipped(),
+                )
+            )
+            break
+
     # Force query rephrasing for first query
     # By default, history_based_query_rephrase skips first query when history is empty.
     # We force rephrasing ONLY for first queries to ensure VESPA receives optimized queries.
@@ -256,7 +269,9 @@ def _run_non_tool_calling_fast_pipeline(
                 custom_history_rephrase_prompt = tool.persona.history_rephrase_prompt
                 # Force rephrase by setting skip_first_rephrase=False
                 rephrase_kwargs: dict = {
-                    "query": tool_args.get("query") or tool_args.get("query_string") or "",
+                    "query": tool_args.get("query")
+                    or tool_args.get("query_string")
+                    or "",
                     "history": history,
                     "llm": dependencies.llm,
                     "skip_first_rephrase": False,

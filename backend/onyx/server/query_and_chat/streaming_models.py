@@ -116,6 +116,13 @@ class CustomToolDelta(BaseObj):
     file_ids: list[str] | None = None
 
 
+class SearchSkipped(BaseObj):
+    """Emitted when search is skipped in the non-tool-calling pipeline."""
+
+    type: Literal["search_skipped"] = "search_skipped"
+    reason: str = "The AI decided this query didn't need a search"
+
+
 """Reasoning Packets"""
 
 
@@ -198,6 +205,7 @@ PacketObj = Annotated[
         SectionEnd,
         SearchToolStart,
         SearchToolDelta,
+        SearchSkipped,
         ImageGenerationToolStart,
         ImageGenerationToolDelta,
         ImageGenerationToolHeartbeat,
@@ -231,6 +239,7 @@ class StreamingType(Enum):
     MESSAGE_DELTA = "message_delta"
     INTERNAL_SEARCH_TOOL_START = "internal_search_tool_start"
     INTERNAL_SEARCH_TOOL_DELTA = "internal_search_tool_delta"
+    SEARCH_SKIPPED = "search_skipped"
     IMAGE_GENERATION_TOOL_START = "image_generation_tool_start"
     IMAGE_GENERATION_TOOL_DELTA = "image_generation_tool_delta"
     PYTHON_TOOL_START = "python_tool_start"

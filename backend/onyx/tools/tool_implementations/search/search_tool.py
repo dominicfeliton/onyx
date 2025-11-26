@@ -262,7 +262,11 @@ class SearchTool(Tool[SearchToolOverrideKwargs]):
         ):
             return None
 
-        rephrase_kwargs: dict[str, Any] = {"query": query, "history": history, "llm": llm}
+        rephrase_kwargs: dict[str, Any] = {
+            "query": query,
+            "history": history,
+            "llm": llm,
+        }
         if custom_history_rephrase_prompt:
             rephrase_kwargs["prompt_template"] = custom_history_rephrase_prompt
         rephrased_query = history_based_query_rephrase(**rephrase_kwargs)

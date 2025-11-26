@@ -25,6 +25,7 @@ interface BaseMemoizedAIMessageProps {
 
 interface InternalMemoizedAIMessageProps extends BaseMemoizedAIMessageProps {
   regenerate?: (modelOverride: LlmDescriptor) => Promise<void>;
+  handleForceSearch?: () => Promise<void>;
 }
 
 interface MemoizedAIMessageProps extends BaseMemoizedAIMessageProps {
@@ -45,6 +46,7 @@ const InternalMemoizedAIMessage = React.memo(
     citations,
     setPresentingDocument,
     regenerate,
+    handleForceSearch,
     overriddenModel,
     nodeId,
     messageId,
@@ -63,6 +65,7 @@ const InternalMemoizedAIMessage = React.memo(
         citations,
         setPresentingDocument,
         regenerate,
+        handleForceSearch,
         overriddenModel,
         researchType,
       }),
@@ -73,6 +76,7 @@ const InternalMemoizedAIMessage = React.memo(
         citations,
         setPresentingDocument,
         regenerate,
+        handleForceSearch,
         overriddenModel,
         researchType,
       ]
@@ -128,6 +132,22 @@ export const MemoizedAIMessage = ({
     };
   }, [messageId, parentMessage, createRegenerator]);
 
+  // Force search handler - regenerates with forceSearch: true
+  const handleForceSearch = useMemo(() => {
+    if (messageId === undefined || parentMessage === undefined) {
+      return undefined;
+    }
+
+    return async () => {
+      // Call regenerator with forceSearch: true and use current model
+      return createRegenerator({
+        messageId: messageId,
+        parentMessage: parentMessage,
+        forceSearch: true,
+      })({} as LlmDescriptor); // Empty descriptor to use current model
+    };
+  }, [messageId, parentMessage, createRegenerator]);
+
   return (
     <InternalMemoizedAIMessage
       rawPackets={rawPackets}
@@ -136,6 +156,7 @@ export const MemoizedAIMessage = ({
       citations={citations}
       setPresentingDocument={setPresentingDocument}
       regenerate={regenerate}
+      handleForceSearch={handleForceSearch}
       overriddenModel={overriddenModel}
       nodeId={nodeId}
       messageId={messageId}

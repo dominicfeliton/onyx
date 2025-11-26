@@ -9,6 +9,7 @@ import { FullChatState } from "@/app/chat/message/messageComponents/interfaces";
 import { FeedbackType } from "@/app/chat/interfaces";
 import { OnyxDocument } from "@/lib/search/interfaces";
 import CitedSourcesToggle from "@/app/chat/message/messageComponents/CitedSourcesToggle";
+import SkippedSearch from "@/app/chat/message/messageComponents/SkippedSearch";
 import { TooltipGroup } from "@/components/tooltip/CustomTooltip";
 import { useRef, useState, useEffect, useCallback, RefObject } from "react";
 import {
@@ -173,6 +174,8 @@ export default function AIMessage({
   // Track indices for graceful SECTION_END injection
   const seenIndicesRef = useRef<Set<number>>(new Set());
   const indicesWithSectionEndRef = useRef<Set<number>>(new Set());
+  // Track if search was skipped (for non-tool-calling LLMs)
+  const searchSkippedRef = useRef<boolean>(false);
 
   // Reset incremental state when switching messages or when stream resets
   const resetState = () => {
@@ -187,6 +190,7 @@ export default function AIMessage({
     stopPacketSeenRef.current = isStreamingComplete(rawPackets);
     seenIndicesRef.current = new Set();
     indicesWithSectionEndRef.current = new Set();
+    searchSkippedRef.current = false;
   };
   useEffect(() => {
     resetState();
@@ -290,6 +294,11 @@ export default function AIMessage({
             }
           }
         }
+      }
+
+      // Check if search was skipped (non-tool-calling LLM)
+      if (packet.obj.type === PacketType.SEARCH_SKIPPED) {
+        searchSkippedRef.current = true;
       }
 
       // check if final answer is coming
@@ -427,6 +436,17 @@ export default function AIMessage({
 
                             return (
                               <>
+                                {/* Show SkippedSearch when search was skipped by non-tool-calling LLM */}
+                                {searchSkippedRef.current &&
+                                  stopPacketSeen &&
+                                  chatState.handleForceSearch && (
+                                    <SkippedSearch
+                                      onForceSearch={
+                                        chatState.handleForceSearch
+                                      }
+                                    />
+                                  )}
+
                                 {/* Render tool groups in multi-tool renderer */}
                                 {toolGroups.length > 0 && (
                                   <MultiToolRenderer
