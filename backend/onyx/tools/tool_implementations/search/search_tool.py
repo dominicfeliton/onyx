@@ -266,6 +266,7 @@ class SearchTool(Tool[SearchToolOverrideKwargs]):
             "query": query,
             "history": history,
             "llm": llm,
+            "skip_first_rephrase": False,
         }
         if custom_history_rephrase_prompt:
             rephrase_kwargs["prompt_template"] = custom_history_rephrase_prompt

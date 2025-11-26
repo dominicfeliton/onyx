@@ -2,6 +2,7 @@ import json
 import uuid
 from collections.abc import Sequence
 from dataclasses import replace
+from typing import Any
 from typing import cast
 from typing import TYPE_CHECKING
 from uuid import UUID
@@ -54,7 +55,6 @@ from onyx.configs.constants import MessageType
 from onyx.context.search.models import InferenceSection
 from onyx.file_store.models import InMemoryChatFile
 from onyx.llm.models import PreviousMessage
-from onyx.secondary_llm_flows.query_expansion import history_based_query_rephrase
 from onyx.server.query_and_chat.streaming_models import CitationDelta
 from onyx.server.query_and_chat.streaming_models import CitationInfo
 from onyx.server.query_and_chat.streaming_models import CitationStart
@@ -122,6 +122,7 @@ def _run_non_tool_calling_fast_pipeline(
     current_user_message: UserMessage,
     ctx: ChatTurnContext,
     prompt_config: PromptConfig,
+    force_use_tool: ForceUseTool | None = None,
 ) -> list[AgentSDKMessage]:
     """
     Custom flow for models that don't support native function calling.
@@ -129,6 +130,10 @@ def _run_non_tool_calling_fast_pipeline(
 
     This method is completely isolated from the main Agent SDK pipeline to prevent
     upstream changes from affecting this functionality.
+
+    Args:
+        force_use_tool: If provided and force_use=True for SearchTool, bypasses
+            the LLM's search decision and forces search to run.
 
     Returns:
         agent_turn_messages: List of function call and function output messages
@@ -232,69 +237,46 @@ def _run_non_tool_calling_fast_pipeline(
         "(before pruning documents)"
     )
 
-    # Check which tools should run for non-tool-calling LLM
-    tool_args_list = check_which_tools_should_run_for_non_tool_calling_llm(
-        list(dependencies.tools), query, history, dependencies.llm
+    # Check if force search is requested
+    force_search = (
+        force_use_tool is not None
+        and force_use_tool.force_use
+        and force_use_tool.tool_name == SearchTool._NAME
     )
 
-    # Check if search was skipped and emit SearchSkipped packet for UI
-    for tool, tool_args in zip(dependencies.tools, tool_args_list, strict=False):
-        if isinstance(tool, SearchTool) and tool_args is None:
-            logger.info("[FAST] Search was skipped - emitting SearchSkipped packet")
-            dependencies.emitter.emit(
-                Packet(
-                    ind=ctx.current_run_step,
-                    obj=SearchSkipped(),
+    if force_search:
+        # Force search to run - bypass LLM's search decision
+        logger.info("[FAST] Force search requested - bypassing search decision")
+        tool_args_list: list[dict[str, Any] | None] = []
+        for tool in dependencies.tools:
+            if isinstance(tool, SearchTool):
+                # Call get_args_for_non_tool_calling_llm with force_run=True
+                tool_args = tool.get_args_for_non_tool_calling_llm(
+                    query=query,
+                    history=history,
+                    llm=dependencies.llm,
+                    force_run=True,
                 )
-            )
-            break
-
-    # Force query rephrasing for first query
-    # By default, history_based_query_rephrase skips first query when history is empty.
-    # We force rephrasing ONLY for first queries to ensure VESPA receives optimized queries.
-    # For subsequent queries with history, rephrasing already happened in get_args_for_non_tool_calling_llm.
-    if not history:  # Only force rephrase if this is the first query (no history)
-        logger.info(
-            f"[FAST] First query detected - forcing rephrasing. Original: {query}"
-        )
-        for i, (tool, tool_args) in enumerate(
-            zip(dependencies.tools, tool_args_list, strict=False)
-        ):
-            if (
-                isinstance(tool, SearchTool)
-                and tool_args is not None
-                and ("query" in tool_args or "query_string" in tool_args)
-            ):
-                # Get custom prompt from persona (None means use default)
-                custom_history_rephrase_prompt = tool.persona.history_rephrase_prompt
-                # Force rephrase by setting skip_first_rephrase=False
-                rephrase_kwargs: dict = {
-                    "query": tool_args.get("query")
-                    or tool_args.get("query_string")
-                    or "",
-                    "history": history,
-                    "llm": dependencies.llm,
-                    "skip_first_rephrase": False,
-                }
-                if custom_history_rephrase_prompt:
-                    rephrase_kwargs["prompt_template"] = custom_history_rephrase_prompt
-                rephrased_query = history_based_query_rephrase(**rephrase_kwargs)
-                # Use the same field name that was originally returned
-                field_name = "query" if "query" in tool_args else "query_string"
-                tool_args_list[i][field_name] = rephrased_query
-                logger.info(f"[FAST] Rephrased query for VESPA: {rephrased_query}")
+                tool_args_list.append(tool_args)
+            else:
+                tool_args_list.append(None)
     else:
-        # Query already rephrased in get_args_for_non_tool_calling_llm
+        # Normal flow: let LLM decide which tools should run
+        tool_args_list = check_which_tools_should_run_for_non_tool_calling_llm(
+            list(dependencies.tools), query, history, dependencies.llm
+        )
+
+        # Check if search was skipped and emit SearchSkipped packet for UI
         for tool, tool_args in zip(dependencies.tools, tool_args_list, strict=False):
-            if (
-                isinstance(tool, SearchTool)
-                and tool_args is not None
-                and ("query" in tool_args or "query_string" in tool_args)
-            ):
-                logger.info(
-                    f"[FAST] Query for VESPA (already rephrased): "
-                    f"{tool_args.get('query') or tool_args.get('query_string')}"
+            if isinstance(tool, SearchTool) and tool_args is None:
+                logger.info("[FAST] Search was skipped - emitting SearchSkipped packet")
+                dependencies.emitter.emit(
+                    Packet(
+                        ind=ctx.current_run_step,
+                        obj=SearchSkipped(),
+                    )
                 )
+                break
 
     # Execute tools that returned arguments
     for tool, tool_args in zip(dependencies.tools, tool_args_list):
@@ -506,6 +488,7 @@ def _run_agent_loop(
             current_user_message=current_user_message,
             ctx=ctx,
             prompt_config=prompt_config,
+            force_use_tool=force_use_tool,
         )
 
         # CRITICAL: Assign citation numbers BEFORE the agent loop

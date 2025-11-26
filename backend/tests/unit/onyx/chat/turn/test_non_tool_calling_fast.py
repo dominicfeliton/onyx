@@ -276,6 +276,137 @@ class TestSearchSkippedPacket:
         ), "SearchSkipped packet should NOT be emitted when no SearchTool is skipped"
 
 
+class TestForceSearch:
+    """Tests for force search functionality."""
+
+    @patch("onyx.chat.turn.fast_chat_turn.get_memories")
+    @patch("onyx.chat.turn.fast_chat_turn.default_build_system_message_v2")
+    @patch(
+        "onyx.chat.turn.fast_chat_turn.check_which_tools_should_run_for_non_tool_calling_llm"
+    )
+    def test_force_search_bypasses_llm_decision(
+        self,
+        mock_check_tools: MagicMock,
+        mock_build_system_message: MagicMock,
+        mock_get_memories: MagicMock,
+    ) -> None:
+        """Test that force search bypasses the LLM's search decision."""
+        from onyx.tools.tool_implementations.search.search_tool import SearchTool
+        from onyx.tools.force import ForceUseTool
+
+        # Setup mocks
+        mock_get_memories.return_value = []
+        mock_build_system_message.return_value = MagicMock(content="System message")
+
+        # Create a mock SearchTool
+        mock_search_tool = MagicMock(spec=SearchTool)
+        mock_search_tool.name = "run_search"
+        mock_search_tool._NAME = "run_search"
+        mock_search_tool.get_args_for_non_tool_calling_llm.return_value = {
+            "query": "rephrased query"
+        }
+
+        # Create mock dependencies
+        deps = MagicMock(spec=ChatTurnDependencies)
+        deps.tools = [mock_search_tool]
+        deps.llm.config.model_name = "test-model"
+        deps.prompt_config = MagicMock()
+        deps.user_or_none = None
+        deps.db_session = MagicMock()
+        deps.emitter = MagicMock()
+
+        # Create context
+        ctx = MagicMock(spec=ChatTurnContext)
+        ctx.current_run_step = 0
+        ctx.should_cite_documents = False
+        ctx.current_input_tokens = 0
+        ctx.fetched_documents_cache = {}
+
+        user_message = {
+            "role": "user",
+            "content": [{"type": "input_text", "text": "Hello, how are you?"}],
+        }
+
+        prompt_config = MagicMock()
+
+        # Create force_use_tool to force search
+        force_use_tool = ForceUseTool(
+            force_use=True,
+            tool_name="run_search",
+        )
+
+        # Call the pipeline with force_use_tool
+        _run_non_tool_calling_fast_pipeline(
+            dependencies=deps,
+            chat_history=[],
+            current_user_message=user_message,
+            ctx=ctx,
+            prompt_config=prompt_config,
+            force_use_tool=force_use_tool,
+        )
+
+        # Verify that check_which_tools_should_run was NOT called (bypassed)
+        mock_check_tools.assert_not_called()
+
+        # Verify that SearchTool.get_args_for_non_tool_calling_llm was called with force_run=True
+        mock_search_tool.get_args_for_non_tool_calling_llm.assert_called_once()
+        call_kwargs = mock_search_tool.get_args_for_non_tool_calling_llm.call_args
+        assert call_kwargs[1].get("force_run") is True
+
+    @patch("onyx.chat.turn.fast_chat_turn.get_memories")
+    @patch("onyx.chat.turn.fast_chat_turn.default_build_system_message_v2")
+    @patch(
+        "onyx.chat.turn.fast_chat_turn.check_which_tools_should_run_for_non_tool_calling_llm"
+    )
+    def test_no_force_search_uses_llm_decision(
+        self,
+        mock_check_tools: MagicMock,
+        mock_build_system_message: MagicMock,
+        mock_get_memories: MagicMock,
+    ) -> None:
+        """Test that without force_use_tool, the LLM decides whether to search."""
+        # Setup mocks
+        mock_get_memories.return_value = []
+        mock_build_system_message.return_value = MagicMock(content="System message")
+        mock_check_tools.return_value = []  # LLM decides no search needed
+
+        # Create mock dependencies
+        deps = MagicMock(spec=ChatTurnDependencies)
+        deps.tools = []
+        deps.llm.config.model_name = "test-model"
+        deps.prompt_config = MagicMock()
+        deps.user_or_none = None
+        deps.db_session = MagicMock()
+        deps.emitter = MagicMock()
+
+        # Create context
+        ctx = MagicMock(spec=ChatTurnContext)
+        ctx.current_run_step = 0
+        ctx.should_cite_documents = False
+        ctx.current_input_tokens = 0
+        ctx.fetched_documents_cache = {}
+
+        user_message = {
+            "role": "user",
+            "content": [{"type": "input_text", "text": "Hello"}],
+        }
+
+        prompt_config = MagicMock()
+
+        # Call the pipeline WITHOUT force_use_tool
+        _run_non_tool_calling_fast_pipeline(
+            dependencies=deps,
+            chat_history=[],
+            current_user_message=user_message,
+            ctx=ctx,
+            prompt_config=prompt_config,
+            force_use_tool=None,  # No forcing
+        )
+
+        # Verify that check_which_tools_should_run WAS called (normal flow)
+        mock_check_tools.assert_called_once()
+
+
 class TestEmptyResponseRetry:
     """Tests for empty response retry logic."""
 
