@@ -103,7 +103,7 @@ export default function AIMessage({
 
       if (isRemoving) {
         // Clicking same button - remove feedback
-        await handleFeedbackChange(messageId, null);
+        await handleFeedbackChange(nodeId, null);
       }
 
       // Clicking like (will automatically clear dislike if it was active).
@@ -115,12 +115,12 @@ export default function AIMessage({
           // Open modal for positive feedback
           setFeedbackModalProps({
             feedbackType: "like",
-            messageId,
+            messageId: nodeId,
           });
           modal.toggle(true);
         } else {
           // No modal needed - just submit like (this replaces any existing feedback)
-          await handleFeedbackChange(messageId, "like");
+          await handleFeedbackChange(nodeId, "like");
         }
       }
 
